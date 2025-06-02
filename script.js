@@ -20,7 +20,10 @@ const Gameboard = (() => {
     }
 
     const reset = () => {
+
         board = Array(9).fill('');
+
+
     }
 
     return { getBoard, makeMove, reset }
@@ -53,6 +56,7 @@ const GameController = (() => {
             const symbolC = board[c];
 
             if (symbolA === symbolB && symbolB === symbolC && symbolA !== '') {
+
                 return symbolA;
             }
 
@@ -63,6 +67,7 @@ const GameController = (() => {
         };
 
         if (isBoardFull(board)) {
+
             return 'draw';
         }
 
@@ -74,19 +79,29 @@ const GameController = (() => {
     let player1;
     let player2;
     let currentPlayer;
+    let gameActive;
 
-    const startGame = () => {
-        player1 = Player('Earth', 'x');
-        player2 = Player('Sin', 'o');
+    const startGame = (name1, symbol1, name2, symbol2) => {
+        player1 = Player(name1, symbol1);
+        player2 = Player(name2, symbol2);
         currentPlayer = player1;
+        gameActive = true;
 
     };
 
     const playRound = (cellIndex) => {
 
+        if (!gameActive) {
+
+            DisplayController.updateStatus("Game is over! Click Restart to play again.");
+            return false;
+        }
+
         let moveStatus = Gameboard.makeMove(cellIndex, currentPlayer.symbol);
 
         if (moveStatus) {
+            DisplayController.renderBoard(Gameboard.getBoard());
+
             let gameStatus = checkGameStatus(Gameboard.getBoard());
 
             if (gameStatus === 'continue') {
@@ -96,62 +111,106 @@ const GameController = (() => {
                 else {
                     currentPlayer = player1;
                 }
+                DisplayController.updateStatus(`It's ${currentPlayer.name}'s turn (${currentPlayer.symbol}).`);
             }
             else {
-                console.log(`Game end Result is ${gameStatus}`)
+                DisplayController.updateStatus(`Game end Result is ${gameStatus}`)
+                gameActive = false;
             }
+
 
             return true;
         }
         else {
-            console.log('move already taken')
+            DisplayController.updateStatus('move already taken')
+
             return false;
         }
     };
 
-    const playGame = () => {
+    const playGame = (name1, symbol1, name2, symbol2) => {
         Gameboard.reset();
-        startGame();
+        startGame(name1, symbol1, name2, symbol2);
 
-        let gameResult = 'continue';
-
-        while (gameResult === 'continue') {
-            console.log(Gameboard.getBoard());
-            console.log(`Current player is ${currentPlayer.name} (${currentPlayer.symbol})`);
-            let cellIndex = parseInt(prompt('Enter your move (0-8):'));
-
-            let roundResult = playRound(cellIndex);
+        DisplayController.renderBoard(Gameboard.getBoard());
+        DisplayController.updateStatus(`It's ${currentPlayer.name}'s turn (${currentPlayer.symbol}).`);
 
 
-            if (!roundResult) {
-                continue
-            }
-
-
-            gameResult = checkGameStatus(Gameboard.getBoard());
-
-
-        }
-
-        console.log("--- FINAL BOARD ---");
-        const finalBoard = Gameboard.getBoard();
-        console.log(`${finalBoard[0]} | ${finalBoard[1]} | ${finalBoard[2]}`);
-        console.log(`--+---+--`);
-        console.log(`${finalBoard[3]} | ${finalBoard[4]} | ${finalBoard[5]}`);
-        console.log(`--+---+--`);
-        console.log(`${finalBoard[6]} | ${finalBoard[7]} | ${finalBoard[8]}`);
-        console.log("-------------------");
-
-        
-        console.log(`Game over! Result: ${gameResult}`);
     };
 
-    return {playGame};
+    return {playRound, playGame };
 })()
 
 
-const ScreenController = (() => {
+// Display controller module
+const DisplayController = (() => {
+
+    const statusDisplay = document.querySelector('.game-status');
+    const boardCell = document.querySelectorAll('.cell');
+    const startBtn = document.querySelector('.start-button');
+    const restartBtn = document.querySelector('.restart-button');
+    const playerSetup = document.querySelector('.player-setup');
 
 
-    
+
+
+    boardCell.forEach((cell) => {
+        cell.addEventListener('click', (e) => {
+
+            const clickedIndex = parseInt(e.target.dataset.index);
+
+
+            GameController.playRound(clickedIndex)
+        })
+
+
+    })
+
+    startBtn.addEventListener('click', () => {
+        let name1 = document.querySelector('#player1-name').value || 'Player 1';
+        let symbol1 = document.querySelector('#player1-symbol').value || 'X';
+        let name2 = document.querySelector('#player2-name').value || 'Player 2';
+        let symbol2 = document.querySelector('#player2-symbol').value || 'O';
+
+        
+        playerSetup.classList.add('hidden');
+
+        GameController.playGame(name1, symbol1, name2, symbol2);
+        DisplayController.updateStatus(`Game start! It is ${name1} (${symbol1}) turn.`);
+    })
+
+    restartBtn.addEventListener('click', () => {
+       
+        playerSetup.classList.remove('hidden');
+        
+        
+        boardCell.forEach(cell => {
+            cell.textContent = '';
+            cell.classList.remove('x', 'o');
+        });
+        
+      
+        updateStatus('');
+    })
+
+    const renderBoard = (board) => {
+        boardCell.forEach((cell, index) => {
+
+            cell.textContent = board[index];
+
+            if (board[index] === 'X') cell.classList.add('x');
+            else if (board[index] === 'O') cell.classList.add('o');
+        })
+    }
+
+    const updateStatus = (message) => {
+
+        statusDisplay.textContent = message;
+
+    }
+
+
+
+
+    return { renderBoard, updateStatus }
 })()
